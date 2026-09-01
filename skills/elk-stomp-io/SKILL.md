@@ -28,24 +28,39 @@ Every entry carries `verification`. It is not decorative:
 | `documented` | stated in a config or vendor doc; not independently confirmed | treat as a claim |
 | `inferred` | reasoned from other facts | **hypothesis. Test before relying on it.** |
 
-Anything below `verified` carries an `evidence` string saying what the basis was. A
-validator enforces that; keep it enforcing.
+Anything below `verified` carries an `evidence` string saying what the basis was.
+`tools/validate-ports.py` in the repo enforces that — plus the level enum, the
+field-override rule, the `engine_channel` encoding, the jumper foreign keys, and the
+control-surface id count — and regenerates the JSON twin so the two cannot drift. Run
+it after every edit; it is tested against deliberate violations.
+
+Some entries grade a single field separately with `<field>_verification`. **Take the
+minimum of the two.** A port's entry-level `verification` grades the *connector* — that
+it exists and is what the label says. It never grades the jack-to-channel binding.
 
 **The discipline that matters: a level is raised only by doing the experiment.** Not by
 confidence, not by consensus, not because a plan depends on it. If you find yourself wanting
 to promote something so a task can proceed, that is precisely the entry to go and test.
 
-Present tally: 14 `verified`, 12 `silkscreen`, 3 `documented`, 3 `inferred`, 1 `probed` —
-and `meta.known_incomplete: true`. An honest map with gaps beats a confident map with
-fiction.
+Present tally, entry-level: 16 `verified`, 11 `silkscreen`, 7 `documented`, 3 `probed`,
+2 `inferred` — plus 15 field-level overrides, most of them `documented` or `inferred`.
+`meta.known_incomplete: true`, and 15 open questions. An honest map with gaps beats a
+confident map with fiction. Run the validator rather than quoting this tally from memory;
+it goes stale on every edit.
 
 ---
 
 ## Facts most likely to bite
 
-**Audio input is only proven on engine channel 0.** `guitar_in_l` → channel 0 is
-`documented` (it is what our working configs used), and `guitar_in_r` → 1 is `silkscreen`
-only. The driver reports **four** inputs; what is physically on 2 and 3 is an open question.
+**No audio input is proven on any channel.** `guitar_in_l` → channel 0 is `documented`,
+resting on Elk's devkit README plus the configs that declare an input; `guitar_in_r` → 1
+carries `engine_channel_verification: inferred`. We never passed signal into a jack with
+the others silent, so no jack-to-channel binding on this board is measured.
+
+**The vendor README answers what the channels are.** `elk-desktop-devkit/README.md:199`
+states the map outright: inputs are guitar in L&R plus stereo line in; outputs are guitar
+out L&R plus stereo headphones. That puts `line_in` on 2/3 — which had been an open
+question in this file for no better reason than that the README was never cited.
 
 **The headphone output works, but its channel attribution does not follow from that.** Audio
 was definitely heard there — however the config that produced it drove engine channels
@@ -57,6 +72,12 @@ way to learn routing. If you need to know, drive one pair at a time.
 (Type A and Type B). Which these are has not been established, and neither has whether Sushi
 sees them as an ALSA device. Until that is settled, USB MIDI into `usb_host` is the proven
 path — see `elk-midi-routing`.
+
+**Stopping things is a hardware concern here.** The `lifecycle` block records the
+SIGINT-only rule: SIGTERM or SIGKILL wedges the `audio_evl` driver and costs a power
+cycle. Note its honesty — the *practice* is `verified` (every stop path in the project
+sends SIGINT), the *failure mode* is `documented` (we followed the rule, we never tested
+what breaking it does).
 
 **Two USB-C ports do different jobs.** One is USB-to-UART (serial console, see
 `elk-serial-console`); the other is a USB gadget port that brings up Ethernet-over-USB — the
@@ -79,13 +100,12 @@ the same day, at the level it deserves:
    back on channel 1" is.
 3. If a fact contradicts an existing entry, fix the entry — do not add a second one. Two
    entries disagreeing is how a reference stops being used.
-4. Regenerate the `.json` twin from the YAML so they cannot drift.
+4. Run `tools/validate-ports.py` — it checks the rules and regenerates the `.json` twin.
 5. Close or amend the matching entry in `open_questions`.
 
-Open questions currently include buffer sizes other than 64 (`sushi_b32`/`b64`/`b128` are
-selected by `AUDIO_BUFFER_SIZE` in `/udata/.elk-system/elk-system.conf`, and only 64 has been
-run), behaviour at 400 MHz versus the 800 MHz all timing was measured at, and whether the SD
-card mounts.
+Open questions currently run to fifteen, ranked. The high-priority four: the TRS MIDI
+pinout, whether those jacks appear to ALSA at all, the jumper matrix, and whether the
+USB-C gadget port can act as a host (its controller is dual-role and it was never tried).
 
 ---
 

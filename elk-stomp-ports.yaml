@@ -5,8 +5,9 @@
 #
 # WHY THIS EXISTS
 #   The board's public description is "Stereo In/out plus controls". The board
-#   itself has nine audio and MIDI connectors, a jumper patchbay that decides
-#   which jack reaches which codec channel, and eleven expansion headers. We
+#   itself carries seven audio jacks, two MIDI jacks and an S/PDIF header, a
+#   jumper patchbay that decides which jack reaches which codec channel, and
+#   fifteen expansion headers (all silkscreen-level - see `expansion`). We
 #   spent a week discovering capabilities that were already there.
 #
 # HOW TO READ IT
@@ -27,21 +28,61 @@
 #   `probed` are safe to act on. `silkscreen` means the hardware is there but
 #   the software path is unproven. `inferred` should be tested before it is
 #   relied upon.
+#
+#   FIELD-LEVEL OVERRIDES. Some entries grade one field separately with
+#   `<field>_verification` (e.g. `engine_channel_verification`). It applies ONLY
+#   to that field. Take the MINIMUM of the entry level and the field level. An
+#   entry's top-level `verification` grades THE CONNECTOR - that it exists and is
+#   what the label says. It never grades the jack-to-channel binding, which
+#   `engine_channel_verification` grades separately.
+#
+#   INHERITANCE. A nested block without its own `verification` inherits its
+#   parent's. Where it carries one, that level wins for that block.
+#
+#   `engine_channel` is a list of ints, or null meaning "audio port, channel not
+#   determined by this audit". `[]` is never used. A missing key means the port
+#   has no engine channel at all. `null` anywhere in this file means "not
+#   determined", never "none".
+#
+#   All of the above is also carried as DATA in `meta` below, because the JSON
+#   twin cannot ship comments.
 
 meta:
-  schema_version: 1
+  schema_version: 2
   board: Elk Stomp development board
   audited: "2026-09-01"
   audited_by: Blues Prince Media / THIRI
   method: >-
     Close-up photography of the physical board for connector inventory, plus
     commands run on the running board over serial and SSH for everything
-    software-visible. No vendor schematic was available.
+    software-visible. No vendor schematic was available. Elk's desktop-devkit
+    README was available and is cited where it is the source.
   known_incomplete: true
   caveat: >-
     Silkscreen labels were read from photographs. Where a label was partially
     obscured it is marked. This file describes ONE board; jumper positions are
     per-unit and yours may differ.
+
+  verification_levels:
+    verified:   {rank: 5, safe_to_act_on: true,  definition: "Passed real signal or ran a command that proved this, on hardware, in this project."}
+    probed:     {rank: 4, safe_to_act_on: true,  definition: "Software on the board reported it (dmesg, lsusb, sysfs); the thing itself was never exercised."}
+    silkscreen: {rank: 3, safe_to_act_on: false, definition: "Read from board photographs; the connector is visibly fitted but unused."}
+    documented: {rank: 2, safe_to_act_on: false, definition: "Stated in a config file or vendor doc we relied on, not independently confirmed."}
+    inferred:   {rank: 1, safe_to_act_on: false, definition: "Reasoned from other facts. Treat as a hypothesis."}
+  field_override_suffix: "_verification"
+  field_override_rule: "effective level = min(entry.verification, entry.<field>_verification)"
+  entry_level_referent: >-
+    A port's top-level `verification` grades the CONNECTOR - that it exists and is
+    what its label says. It never grades the jack-to-channel binding.
+  inheritance: "A nested block without `verification` inherits its parent's; where it carries one, that wins."
+  null_means: "not determined by this audit - never 'none'"
+
+  corrections:
+    - claim: "The Stomp has no MIDI jacks."
+      status: WRONG
+      correction: "The board has MIDI IN and MIDI OUT on 3.5 mm TRS."
+      source_of_error: "Taken from the product-page I/O summary and repeated for a week."
+      affects: [midi_in, midi_out]
 
 system:
   soc:
@@ -61,27 +102,37 @@ system:
     verification: silkscreen
     evidence: "Board photograph of the SoM module"
   memory:
-    ram_mb: ~1024
-    swap: none
+    ram_mb: 1024
+    ram_mb_basis: nominal
+    ram_free_mb_observed: 889
+    swap_mb: 0
     verification: verified
-    evidence: "free -m on the board"
+    evidence: "free -m on the board. ram_mb is the nominal DRAM capacity; free -m reports less because of kernel reservation."
   storage:
-    emmc_gb: ~7.2
+    emmc_gb: 7.2
+    emmc_gb_approximate: true
     note: >-
       mmcblk1 with boot0/boot1 partitions, which only eMMC has. Root partition
       ships ~83% full with under 200 MB free, and /home/mind lives on it.
       /udata is a separate ~1.9 GB partition with ~1.8 GB free - put large
       files there.
     verification: verified
-    evidence: "/proc/partitions, df -h"
+    evidence: "/proc/partitions (block count, rounded), df -h"
   rtc:
-    present: false
+    clock_trustworthy: false
     impact: >-
-      The clock resets on boot and reports a wrong date. File mtimes on this
-      board are meaningless. Identify deployed artefacts by sha256, never by
-      timestamp.
+      The board's wall clock is wrong, so file mtimes on this board are
+      meaningless. Identify deployed artefacts by sha256, never by timestamp.
     verification: verified
-    evidence: "date returned 2025 on a board running in 2026"
+    evidence: "`date` on the board returned a 2025 date while the host clock read 2026."
+    present: unknown
+    present_verification: inferred
+    present_evidence: >-
+      Never probed. `ls /dev/rtc*`, `hwclock -r` and `dmesg | grep rtc` were all
+      never run. The STM32MP157 carries an on-chip RTC peripheral and this board
+      has a VBAT "battery / backup rail" header, so "no RTC" is a hypothesis, not
+      a finding. A wrong clock is equally consistent with an RTC present but unset,
+      a dead backup cell, or no NTP.
   os:
     name: Elk Audio OS
     version: 1.2.2
@@ -91,9 +142,39 @@ system:
     verification: verified
     evidence: "uname -a, /etc/os-release, dmesg"
     gotchas:
-      - "BusyBox: `head -5` is invalid, use `head -n 5`"
-      - "No `ip`, no `install`, no `base64` binary (python3 is present)"
-      - "systemd-logind reaps user processes on logout; the serial console login persists where SSH does not"
+      verification: verified
+      evidence: >-
+        BusyBox flag and applet failures hit directly during serial-console work;
+        systemd-logind reaping observed when SSH sessions dropped background
+        processes.
+      items:
+        - "BusyBox: `head -5` is invalid, use `head -n 5`"
+        - "BusyBox has no `base64` binary; use python3 to decode file transfers"
+        - "systemd-logind reaps user processes on logout; the serial console login persists where SSH does not. If the reaped process is Sushi, see `lifecycle` - that reap delivers a fatal signal."
+    disputed_gotchas:
+      verification: documented
+      evidence: >-
+        Recorded as observed during the 2026-08-26 serial session ("`ip` absent -
+        use `ifconfig`"), but CONTRADICTED by three documents in the sibling repo
+        which prescribe `ip addr` on the board (docs/ELK-COMMANDS.md:147,
+        docs/PROFILING.md:15, stomp/PORT.md:40). Those three are laptop-written
+        prescriptions, not recorded observations, so they are the weaker source -
+        but `command -v ip` was never run and one side is wrong. Do not rely on
+        either until it is settled. See open_questions.ip_binary_present.
+      items:
+        - "`ip` may be absent (use `ifconfig`) - DISPUTED, see evidence"
+        - "`install` may be absent - corroborated nowhere"
+  sushi:
+    version: "1.3.0"
+    verification: verified
+    evidence: >-
+      Read from Sushi's own gRPC SystemController.GetBuildInfo (info.version) by
+      the profiling harness on the board - recorded per row in
+      data/profiling-results.csv, 45 board rows, all 1.3.0. Do NOT try to read it
+      from /usr/bin/sushi, which is a wrapper shell script.
+    gotchas:
+      - "Sushi has NO xrun counter. `max >= 1.0` in its timing statistics is the only dropout signal, and nothing will tell you to look."
+      - "/usr/bin/sushi is a wrapper shell script that selects sushi_b32/b64/b128. `ldd` and `strings` on it tell you nothing - inspect sushi_b<size> instead."
 
 audio_engine:
   sample_rate: 48000
@@ -104,19 +185,80 @@ audio_engine:
   audio_thread_cpu: 1
   verification: verified
   evidence: "dmesg audio_evl channel enumeration; AUDIO_PROC_START cpu_num: 1"
+
+  timing_unit: >-
+    Sushi's Timings {average, min, max} are a FRACTION of the block period, NOT
+    milliseconds - elkpy's docstring says ms and is wrong. 1.0 = deadline_ms
+    (1.333). Every unitless timing number in this file is in these units.
+  timing_unit_verification: documented
+  timing_unit_evidence: >-
+    RUNBOOK.md section 0; tools/profile_sweep.py header. The CSV's thiri_max_ms
+    column is DERIVED from thiri_max by the harness, so it corroborates nothing
+    on its own.
+
   critical_note: >-
     CPU 0 is idle. Any companion process (hardware daemon, control app) left
-    unpinned lands on CPU 1 and fights the audio callback. Measured: worst-case
-    block cost 0.770 alone, 2.273 with an unpinned control surface, 0.760 with
-    `taskset -c 0`. The AVERAGE never moved (~0.60) in any of the three.
+    unpinned lands on CPU 1 and fights the audio callback. Pinning A/B, one
+    paired session on the live rig config (60 s steady playback per arm), as a
+    fraction of the block period: worst block 0.770 alone, 2.273 with an
+    unpinned control surface, 0.760 with `taskset -c 0`. The AVERAGE never moved
+    (~0.60) in any of the three. 0.770 is that session's control arm, NOT the
+    board's general clean baseline: across the unloaded board rows in
+    data/profiling-results.csv the worst block ranges roughly 0.74-0.83 at the
+    same ~0.60 average. Budget headroom against 0.83; read a pinning regression
+    only from a multiple-of-baseline jump like 2.273, not from 0.83 variance.
+  critical_note_verification: verified
+  critical_note_evidence: >-
+    Measured on this board in this project; conditions and results recorded at
+    horn-sxtn/stomp/run_rig.sh. NOT in data/profiling-results.csv - no row in
+    that dataset varies thread affinity (affinity_psr is "na" in all 51 rows)
+    and tools/ has no harness that pins or unpins a companion process.
+
+  buffer_size_selection:
+    binaries: [sushi_b32, sushi_b64, sushi_b128]
+    selector: "AUDIO_BUFFER_SIZE in /udata/.elk-system/elk-system.conf"
+    run_in_this_project: [64]
+    verification: probed
+    evidence: >-
+      The three binaries and the wrapper were read on the board, and the running
+      block size read back per profiling row via Sushi's GetBuildInfo. No size
+      other than 64 was ever selected, so the selector's effect is unexercised.
+
   channel_names_as_reported:
-    # The driver's own channel_name strings. Note channels 1-3 are all reported
-    # as "-R", which looks like a driver naming quirk rather than four right
-    # channels. Do not read meaning into the names beyond channel 0.
     in:  ["In-L", "In-R", "In-R", "In-R"]
     out: ["Out-L", "Out-R", "Out-R", "Out-R"]
+    caveat: >-
+      The driver's own channel_name strings. Channels 1-3 are all reported as
+      "-R", which looks like a driver naming quirk rather than four right
+      channels. Do not read meaning into the names beyond channel 0.
     verification: verified
     evidence: "dmesg audio_evl: Input/Output channel N info, channel_name field"
+
+# ---------------------------------------------------------------------------
+# LIFECYCLE - how to stop things without wedging the board
+# ---------------------------------------------------------------------------
+lifecycle:
+  stop_signal: SIGINT
+  forbidden_signals: [SIGTERM, SIGKILL]
+  practice:
+    verification: verified
+    evidence: >-
+      Every stop path in this project sends SIGINT and only SIGINT
+      (tools/sushi_board.sh stop -> `kill -INT`; horn-sxtn/stomp/run_rig.sh).
+      This proves the procedure works, not what the other signals do.
+  failure_mode:
+    effect: >-
+      SIGTERM or SIGKILL wedges the audio_evl driver. The next Sushi launch hangs
+      and the board must be power-cycled.
+    verification: documented
+    evidence: >-
+      Stated as known Elk driver behaviour in the sibling repo's bug report and
+      port notes, and in RUNBOOK.md. We NEVER deliberately reproduced it - the
+      rule was followed, never tested.
+  traps:
+    - "Elk's `run-example.sh` traps INT only, and its trap runs `kill 0` - SIGTERM to the whole process group. Signal it with `kill -INT $(pgrep -f run-example.sh)`."
+    - "A dropped SSH session can deliver the fatal signal: systemd-logind reaps the user scope on logout. Start with `setsid nohup`, or from the serial console."
+    - "/tmp/sushi.log flushes only on a clean exit. An empty log after a kill means nothing, not 'no errors'. Use --log-flush-interval=1."
 
 # ---------------------------------------------------------------------------
 # PORTS
@@ -130,10 +272,19 @@ ports:
     group: power
     connector: barrel
     polarity: centre-negative
+    polarity_verification: silkscreen
     current_min_a: 1.5
+    current_min_a_verification: documented
     usb_powered: false
+    usb_powered_verification: documented
     verification: verified
-    evidence: "Silkscreen shows the centre-negative symbol; the board runs from a 9V pedal supply"
+    evidence: >-
+      The board was powered and run from a 9V centre-negative pedal supply
+      throughout this project. The centre-negative symbol was read from the
+      silkscreen, not measured. The >=1.5 A minimum and "not USB-powered" are
+      documented only in the sibling repo's port notes and spec - current draw
+      was never measured and running the board on USB alone was never attempted.
+      (Those two sources differ: ">=1.5 A" against "1.5A".)
 
   # --- audio in ------------------------------------------------------------
   - id: guitar_in_l
@@ -141,40 +292,53 @@ ports:
     group: audio_in
     connector: '1/4 inch'
     level: instrument
-    engine_channel: 0
+    engine_channel: [0]
+    engine_channel_verification: documented
     routing_jumpers: ["G-I-L"]
     verification: documented
     evidence: >-
-      Every Sushi config in this project declares inputs as
-      {engine_channel: 0, track_channel: 0} and the project's rig notes patch
-      the instrument here. We did not isolate the jack by passing signal into
-      it alone, so the jack-to-channel binding is documented, not proven.
+      Elk's desktop-devkit README (README.md:199) enumerates the Stomp's four
+      engine channels as "inputs = guitar inputs L&R and stereo line in, outputs:
+      guitar outputs L&R and stereo headphones out"; guitar in L is first, hence
+      channel 0. Separately, the board configs that declare an input at all use
+      {engine_channel: 0, track_channel: 0}; the rest declare "inputs": [] and
+      generate audio internally, including the configs behind every board row in
+      data/profiling-results.csv. We never passed signal into this jack with the
+      other inputs silent, so the jack-to-channel binding is documented, not proven.
 
   - id: guitar_in_r
     label: "GUITAR IN R"
     group: audio_in
     connector: '1/4 inch'
     level: instrument
-    engine_channel: 1
+    engine_channel: [1]
     engine_channel_verification: inferred
     routing_jumpers: ["G-I-R"]
     verification: silkscreen
-    evidence: "Connector fitted and labelled on the board. Never used. Channel 1 is an assumption of symmetry with L."
+    evidence: "Connector fitted and labelled on the board. Never used. Channel 1 is an assumption of symmetry with L, corroborated by the devkit README's ordering."
 
   - id: line_in
     label: "LINE IN"
     group: audio_in
     connector: 3.5 mm
     level: line
-    engine_channel: null
+    engine_channel: [2, 3]
+    engine_channel_verification: documented
+    routing_jumpers: null
     verification: silkscreen
-    evidence: "Connector fitted and labelled, distinct from GUITAR IN. Never used; channel mapping unknown."
-    note: "A separate physical jack from GUITAR IN - not a level switch on the same jack."
+    evidence: >-
+      Connector fitted and labelled, distinct from GUITAR IN. Never used. The
+      channel mapping comes from Elk's desktop-devkit README:199, which lists the
+      four engine INPUTS as guitar in L&R plus stereo line in - so line in is 2/3.
+      No signal was ever passed into this jack, and the routing jumpers are
+      per-unit, so this is documented, not measured.
+    note: "A separate physical jack from GUITAR IN - not a level switch on the same jack. Jumper block not identified; see open_questions.jumper_matrix."
 
   - id: spdif_rx
     label: "SPDIF_RX"
     group: audio_in
     connector: header
+    engine_channel: null
     verification: silkscreen
     evidence: "Silkscreen only. Digital audio input. Never investigated."
 
@@ -183,29 +347,39 @@ ports:
     label: "GUITAR OUT L"
     group: audio_out
     connector: '1/4 inch'
-    engine_channel: 0
+    engine_channel: [0]
     engine_channel_verification: documented
     routing_jumpers: ["G-O-L"]
     verification: silkscreen
-    evidence: "Connector fitted and labelled. Configs route track output to engine channels 0 and 1; never monitored from this jack."
+    evidence: >-
+      Connector fitted and labelled. Every board config routes track outputs to
+      engine channels 0, 1, 2 and 3 together and no config names a jack, so the
+      configs do not bind this jack to a channel. The binding comes from Elk's
+      devkit README:199, which lists the four engine outputs as guitar out L&R
+      plus stereo headphones. Never monitored from this jack.
 
   - id: guitar_out_r
     label: "GUITAR OUT R"
     group: audio_out
     connector: '1/4 inch'
-    engine_channel: 1
+    engine_channel: [1]
     engine_channel_verification: documented
     routing_jumpers: ["G-O-R"]
     verification: silkscreen
-    evidence: "As GUITAR OUT L."
+    evidence: "As GUITAR OUT L - devkit README:199 for the binding, connector read from photographs, never monitored."
 
   - id: line_out
     label: "LINE OUT"
     group: audio_out
     connector: 3.5 mm
     engine_channel: null
+    routing_jumpers: null
     verification: silkscreen
     evidence: "Connector fitted and labelled, distinct from GUITAR OUT. Never used."
+    note: >-
+      The devkit README's four engine OUTPUTS are guitar out L/R plus headphones,
+      so LINE OUT is not one of the four by default. It is presumably an alternate
+      jumper destination. Jumper block not identified; see open_questions.jumper_matrix.
 
   - id: headphone_out
     label: "HEADPHONE OUT"
@@ -219,8 +393,10 @@ ports:
       Audio was heard here. But the config drove engine channels 0,1,2,3
       simultaneously with the same signal, so we cannot attribute the headphone
       output to 2/3 specifically - only that it produced sound while all four
-      were driven. The 2/3 mapping is the config's intent, not an isolated
-      measurement.
+      were driven. Elk's devkit README:199 does list the engine outputs as guitar
+      out L&R plus stereo headphones, which agrees with 2/3 - but the jack was
+      never isolated and jumper positions are per-unit, so the binding stays
+      inferred rather than being raised on the vendor doc alone.
 
   # --- MIDI ----------------------------------------------------------------
   # THE CORRECTION. We asserted for a week that this board has no MIDI jacks,
@@ -232,8 +408,13 @@ ports:
     group: midi
     connector: 3.5 mm TRS
     trs_type: unknown
+    alsa_status: unknown
     verification: silkscreen
     evidence: "Connector fitted and labelled on the board, beside the Elk logo. Never used."
+    note: >-
+      No ALSA MIDI device was ever attributed to this jack. The only MIDI client
+      seen in this board's `aconnect` listing was the USB-attached wind controller,
+      so whether these jacks appear to ALSA at all is unknown, not absent.
     warning: >-
       TRS MIDI has two incompatible pinouts (Type A and Type B). Which this is
       has NOT been established. Check before wiring anything to it.
@@ -243,8 +424,16 @@ ports:
     group: midi
     connector: 3.5 mm TRS
     trs_type: unknown
+    alsa_status: unknown
     verification: silkscreen
     evidence: "Connector fitted and labelled. Never used."
+    note: "As MIDI IN: no ALSA MIDI device was ever attributed to this jack."
+    software_blocker: >-
+      Even with the jack working, Sushi's `midi.track_out_connections` is not
+      declared in its midi_schema.json and validates only because the schema omits
+      `additionalProperties: false`. Too fragile to build on.
+    software_blocker_verification: documented
+    software_blocker_evidence: "Sibling repo's MIDI-FX notes, from reading Sushi's schema. Never exercised."
     warning: "Same TRS pinout caveat as MIDI IN."
 
   # --- USB -----------------------------------------------------------------
@@ -253,26 +442,44 @@ ports:
     group: usb
     connector: USB-C
     controller: FTDI FT4232HL
+    controller_verification: inferred
+    controller_evidence: >-
+      The part number appears in this project's notes but no lsusb, dmesg or
+      system_profiler capture recording it survives, and it was not read off the
+      IC. What IS established is that the host sees four tty devices, which is
+      consistent with a quad-channel FTDI.
     role: serial console
     verification: verified
     evidence: "Serial console used throughout the project at 115200 baud"
     note: >-
-      Quad-channel FTDI: the host sees FOUR tty devices. The console is the
-      LOWEST-numbered. The device numbering changes when you move the cable to
-      a different host port.
+      The host sees FOUR tty devices. The console is the LOWEST-numbered. The
+      device numbering changes when you move the cable to a different host port.
 
   - id: usb_host
     label: "USB HOST"
     group: usb
     connector: USB-A
-    controllers: [ehci-platform, ohci-platform]
-    buses: [3, 2]
+    controllers:
+      - {driver: ohci-platform, speed: full, verification: verified, evidence: "A Roland Aerophone AE-10 (0582:01d1) enumerated on this controller at full speed."}
+      - {driver: ehci-platform, speed: high, verification: probed,   evidence: "Seen in dmesg at boot; never carried a device."}
+    bus_numbers_observed: [2, 3]
+    bus_pairing_note: >-
+      The original record paired controllers with buses positionally and
+      non-monotonically, so which number belongs to which controller is no longer
+      reliable. Both numbers were observed; the pairing was not recorded.
     role: host
     verification: verified
     evidence: >-
       A Roland Aerophone AE-10 (0582:01d1) enumerated here on the OHCI bus at
       full speed; snd-usb-audio autoloaded with no configuration and the device
       appeared as an ALSA sequencer client.
+    note: >-
+      Only full-speed enumeration through OHCI was exercised. High-speed
+      operation on this jack is untested.
+    gotchas:
+      - "A USB MIDI device enumerating is NOT the same as Sushi seeing it. Sushi does not auto-connect to hardware MIDI inputs: its ALSA sequencer client appears asynchronously and must be joined with `aconnect <src>:0 <sushi>:0`. Without that link the cc_mappings are DEAF - config correct, connections registered, nothing logged, parameters never move."
+      - "Running `amidi` on the raw device severs that sequencer link. Re-link after any raw MIDI capture."
+      - "Restarting Sushi gives it a new client id and drops all connections. Re-link every launch."
 
   - id: usb_gadget
     label: "USB"
@@ -280,12 +487,19 @@ ports:
     connector: USB-C
     controller: dwc2 49000000.usb-otg
     bus: 1
-    role: device/gadget
+    role: device/gadget (observed; controller is dual-role)
+    host_mode: untested
     default_function: g_ether
     verification: verified
     evidence: >-
       dmesg shows `dwc2 49000000.usb-otg: bound driver g_ether` at boot;
-      networking to a host over a single cable, no dongle required.
+      networking to a host over a single cable, no dongle required
+      (board 10.66.0.2, host 10.66.0.1).
+    note: >-
+      The controller is named `usb-otg` and dwc2 on the STM32MP157 is dual-role,
+      so host mode is not ruled out - it was never attempted, and whether the port
+      sources VBUS is unknown. Read `device/gadget` as "gadget is what we proved",
+      not "host is impossible".
     gotchas:
       - "ConnMan disables usb0 unless blacklisted."
       - "A charge-only USB-C cable is indistinguishable from a dead board. Check /sys/class/udc/*/state - `not attached` means no host is seen."
@@ -304,9 +518,11 @@ ports:
 # ---------------------------------------------------------------------------
 routing:
   summary: >-
-    The audio engine exposes 4 in / 4 out but the board has seven audio jacks.
-    They cannot all be live at once. Which physical jack reaches which codec
-    channel is set by JUMPER POSITION, in hardware, not by software.
+    The audio engine exposes 4 in / 4 out but the board has seven audio jacks -
+    three in (guitar L/R, line in) and four out (guitar L/R, line out,
+    headphones). The output side cannot all be live at once. Which physical jack
+    reaches which codec channel is set by JUMPER POSITION, in hardware, not by
+    software.
   practical_rule: >-
     If a jack seems dead, check the jumpers before you check your code.
   documented_anywhere: false
@@ -316,6 +532,16 @@ routing:
     mapping from jumper position to codec channel was NOT determined - we never
     moved one. This section is a hypothesis about the mechanism, supported by
     the labelling, not a measured truth table.
+  jumper_state_as_found:
+    recorded: false
+    state: "not recorded - the shunt positions on this unit were never transcribed"
+    note: >-
+      Every observation in this file, including the audio heard at HEADPHONE OUT,
+      was taken with the jumpers exactly as the board shipped; none was moved. A
+      unit whose jumpers sit differently may route differently, and this file gives
+      you no reference state to compare yours against.
+    verification: inferred
+    evidence: "Basis is routing.evidence ('we never moved one'). The positions themselves were never read off the board or transcribed from the photographs."
   blocks:
     - {label: "G-I-L", relates_to: guitar_in_l}
     - {label: "G-I-R", relates_to: guitar_in_r}
@@ -323,18 +549,25 @@ routing:
     - {label: "G-O-R", relates_to: guitar_out_r}
     - {label: "HPL",   relates_to: headphone_out}
     - {label: "HPR",   relates_to: headphone_out}
-    - {label: "PH13",  relates_to: unknown}
-    - {label: "PH14",  relates_to: unknown}
+    - {label: "PH13",  relates_to: null, note: "No matching jack silkscreen. Function not determined; PH13/PH14 also read as STM32 port-H pin names, so do not assume this is an audio-jack block."}
+    - {label: "PH14",  relates_to: null, note: "As PH13."}
 
 # ---------------------------------------------------------------------------
 # EXPANSION HEADERS - present on the board, none exercised
 # ---------------------------------------------------------------------------
 expansion:
   verification: silkscreen
-  evidence: "All read from board photographs. Not one was used in this project."
+  evidence: >-
+    All read from board photographs. Not one was used in this project. The
+    `purpose` strings are the printed label decoded, except where noted.
   headers:
     - {label: "I2S EXP",   purpose: "digital audio expansion"}
-    - {label: "ADC EXP",   purpose: "analogue inputs beyond the onboard pots"}
+    - label: "ADC EXP"
+      purpose: "analogue inputs beyond the onboard pots"
+      purpose_verification: inferred
+      purpose_evidence: >-
+        The label reads ADC EXP; "beyond the onboard pots" is an interpretation of
+        what such a header would be for, not something the silkscreen states.
     - {label: "GPIO EXP",  purpose: "general-purpose I/O"}
     - {label: "SPI1 EXP",  purpose: "SPI bus 1"}
     - {label: "SPI2 EXP",  purpose: "SPI bus 2"}
@@ -353,21 +586,56 @@ expansion:
 # CONTROL SURFACE
 # ---------------------------------------------------------------------------
 controls:
-  verification: verified
+  verification: documented
   evidence: >-
-    Enumerated from the board's sensei_config.json, which lists 41 addressable
-    elements, and cross-checked against board photographs.
-  pots:      {count: 8,  ids: [21, 22, 23, 24, 25, 26, 27, 28], silkscreen: "POTS 1-8"}
-  encoders:  {count: 4,  ids: [33, 34, 35, 36], silkscreen: "ENCODERS 1-4"}
-  encoder_switches: {count: 4, ids: [29, 30, 31, 32], note: "the encoders push"}
-  switches:  {count: 4,  ids: [17, 18, 19, 20], silkscreen: "KEY 1-4"}
-  rgb_leds:  {count: 4,  ids: [[1,2,3],[4,5,6],[7,8,9],[10,11,12]], note: "r,g,b per LED"}
+    Enumerated from sensei_config.json, which lists 41 addressable elements. The
+    board's own copy is at /home/mind/sensei_config.json (run_rig.sh invokes
+    `sensei -f` on it); the copy readable off-board is the devkit's board-gui mock,
+    and the two agree on all 41 ids and names. Connector presence was cross-checked
+    against board photographs. This is a declaration of what Sensei exposes, not a
+    measurement: no element's physical actuation was recorded on this board. Real
+    Sensei plus the Guru glue did run on the board during the CPU-pinning sweeps,
+    which proves the daemon loads this map - not that every element responds.
+  addressing_note: >-
+    INPUTS are bound by `controller_name` (a name Sensei does not know raises
+    ValueError at register time, listing the available names). OUTPUTS (LEDs, RGB
+    channels) are addressed by numeric id via UpdateLed(controller_id=...).
+  pots:      {count: 8,  ids: [21, 22, 23, 24, 25, 26, 27, 28], names: [POT1, POT2, POT3, POT4, POT5, POT6, POT7, POT8], silkscreen: "POTS 1-8"}
+  encoders:  {count: 4,  ids: [33, 34, 35, 36], names: [ENC1, ENC2, ENC3, ENC4], silkscreen: "ENCODERS 1-4"}
+  encoder_switches: {count: 4, ids: [29, 30, 31, 32], names: [ENC1S, ENC2S, ENC3S, ENC4S], note: "the encoders push"}
+  switches:
+    count: 4
+    ids: [17, 18, 19, 20]
+    names: [SW1, SW2, SW3, SW4]
+    silkscreen: "KEY 1-4"
+    warning: >-
+      The silkscreen legend and the Sensei name DIVERGE here. The board is printed
+      KEY 1-4; Sensei calls them SW1-SW4. Guru resolves by name, so
+      controller_name="KEY1" is wrong. For pots and encoders the legend and the
+      name happen to resemble each other - do not generalise that.
+  rgb_leds:
+    count: 4
+    leds: [{r: 1, g: 2, b: 3}, {r: 4, g: 5, b: 6}, {r: 7, g: 8, b: 9}, {r: 10, g: 11, b: 12}]
+    ids: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
   leds:      {count: 4,  ids: [13, 14, 15, 16]}
-  preset_switch: {id: 37}
-  rotary_switch:
+  preset_switch:
+    ids: [37]
+    sensei_name: PRESET_SW
     silkscreen: "4-POSITION ROTARY SWITCH"
-    verification: silkscreen
-    evidence: "Read from board photographs. Not present in sensei_config.json, so it may not be exposed through Sensei."
+    reads_as: >-
+      analog_input on an 8-bit ADC. It arrives as a LEVEL, not a toggle - threshold
+      the analog value into positions.
+    verification: documented
+    evidence: >-
+      sensei_config.json id 37, name PRESET_SW, sensor_type analog_input.
+      Silkscreen label read from board photographs. NEVER EXERCISED - the number of
+      distinct levels and where they sit in 0-255 are unconfirmed.
+    identification: inferred
+    identification_note: >-
+      That PRESET_SW is the 4-position rotary is an inference: it is the only one of
+      the 41 entries not otherwise accounted for (1-12 RGB, 13-16 LED, 17-20 SW,
+      21-28 POT, 29-32 ENC*S, 33-36 ENC, 38-41 DET), and an 8-bit ADC on one pin is
+      the standard way to read a multi-position rotary.
   oled:
     interface: SPI
     pins: [GND, VCC, SCK, SDA, RES, DC, CS]
@@ -377,16 +645,26 @@ controls:
     ids: [38, 39, 40, 41]
     names: [GUIT_IN_L_DET, GUIT_IN_R_DET, GUIT_OUT_L_DET, GUIT_OUT_R_DET]
     note: >-
-      The board can tell when a cable is inserted in each guitar jack. Free
-      auto-switching or mute-on-unplug. Never used in this project.
+      Four controller ids suggesting the board can tell when a cable is inserted in
+      each guitar jack - free auto-switching or mute-on-unplug if it works.
+    verification: documented
+    evidence: >-
+      Four controller ids named GUIT_*_DET in the board's sensei_config.json. Never
+      mapped in the glue app, never handled, and no insertion event was ever
+      observed - so that the detect lines work, and that Sensei emits events for
+      them, is unconfirmed.
   banking:
     supported: true
     mechanism: >-
-      Elk's Guru glue library indexes its mapping table by mode -
-      MAPPINGS is a list OF lists, with ModeSwitch and CycleMode events already
-      wired to the observer. Most example code defines one mode and stops there.
-    verification: verified
-    evidence: "Read directly from guru/src/guru/mappings.py on the board"
+      Elk's Guru glue library indexes its mapping table by mode - MAPPINGS is a
+      list OF lists, with ModeSwitch and CycleMode events already wired to the
+      observer. Most example code defines one mode and stops there.
+    verification: documented
+    evidence: >-
+      Read from the Guru library source on the board - guru/src/guru/mappings.py
+      (ModeSwitch/CycleMode subscriptions; mappings enumerated per mode). Source
+      read, not behaviour observed. This project shipped a single mode, so an agent
+      planning a multi-bank control surface is designing against unrun code.
 
 # ---------------------------------------------------------------------------
 # OPEN QUESTIONS - what an agent should NOT assume
@@ -394,24 +672,52 @@ controls:
 open_questions:
   - id: midi_trs_pinout
     priority: high
-    question: "Are MIDI IN/OUT Type A or Type B TRS? And does Sushi see them as an ALSA MIDI device?"
+    question: "Are MIDI IN/OUT Type A or Type B TRS?"
     why: "Determines whether hardware MIDI is usable at all, and with which cables."
+  - id: midi_alsa_visibility
+    priority: high
+    question: "Do the hardware MIDI jacks appear to ALSA on this board at all, and does Sushi see them as a MIDI device?"
+    why: "Bundled with the pinout question this could never close - answering the cheap half leaves the jacks unusable."
   - id: jumper_matrix
     priority: high
     question: "Which jumper position routes which jack to which codec channel?"
     why: "Seven jacks, four channels. Without this, jack selection is guesswork."
+  - id: usb_c_host_mode
+    priority: high
+    question: "Can the USB-C gadget port act as a USB host, and does it source VBUS?"
+    why: "The controller is dual-role. If it can host, the board gains a second USB input without a hub."
+  - id: jumper_state_as_found
+    priority: medium
+    question: "What jumper positions was this unit shipped with?"
   - id: line_jacks
     priority: medium
-    question: "What channels do LINE IN and LINE OUT map to, and are they exclusive with the guitar jacks?"
+    question: "Are LINE IN and LINE OUT exclusive with the guitar jacks, and which jumper exposes LINE OUT?"
   - id: input_channels_2_3
     priority: medium
-    question: "The driver reports 4 inputs. What is physically on channels 2 and 3?"
+    question: "The devkit README says line in is engine channels 2 and 3. Confirm on this board by passing signal into LINE IN alone."
+  - id: preset_sw_levels
+    priority: medium
+    question: "How many distinct levels does PRESET_SW produce, and where do they sit in 0-255?"
+  - id: ip_binary_present
+    priority: medium
+    question: "Does the board have `ip` and `install`? Run `command -v ip install base64`."
+    why: "This project's own records contradict each other; one side is wrong and it was never re-checked."
   - id: cpu_400mhz
     priority: medium
     question: "All timing measurements were taken at 800 MHz. What happens at 400?"
   - id: buffer_sizes
     priority: low
-    question: "Elk ships sushi_b32/b64/b128 selected by AUDIO_BUFFER_SIZE in /udata/.elk-system/elk-system.conf. Only 64 was ever run."
+    question: "Does setting AUDIO_BUFFER_SIZE to 32 or 128 actually switch binaries, and what does it do to the headroom numbers?"
+    why: "Every timing figure in this project was taken at 64 frames / 1.333 ms."
+  - id: usb_high_speed
+    priority: low
+    question: "Does a high-speed device enumerate on the EHCI controller at USB HOST?"
+  - id: jack_detect_events
+    priority: low
+    question: "Do the GUIT_*_DET lines actually fire, and does Sensei emit events for them?"
+  - id: rtc_present
+    priority: low
+    question: "Is there an RTC? Run `ls /dev/rtc*`, `hwclock -r`, `dmesg | grep -i rtc`."
   - id: sd_card
     priority: low
     question: "Does a card mount, and does the SD CARD JUMPER need setting?"

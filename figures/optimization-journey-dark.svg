@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" width="1600" height="560" font-family="ui-monospace, Menlo, Consolas, 'DejaVu Sans Mono', monospace" role="img" aria-label="Pitch tracker peak block cost reduced from 8.1 to 1.0 milliseconds, crossing under the 1.333 millisecond budget.">
+<rect width="1600" height="560" fill="#0d0d10"/>
+<text x="100" y="72" font-size="40" font-weight="700" fill="#eae7df">Pitch tracker: worst block</text>
+<text x="100" y="110" font-size="24" fill="#9a9aa2">on-board benchmark &#183; the budget is 1.333 ms per block</text>
+<text x="440" y="214" text-anchor="end" font-size="30" fill="#9a9aa2">scalar (as found)</text>
+<rect x="470" y="170" width="846.0" height="60" rx="8" fill="#6a6a72"/>
+<text x="1432.0" y="214" font-size="32" fill="#eae7df">8.1 ms</text>
+<text x="440" y="332" text-anchor="end" font-size="30" fill="#9a9aa2">+ vector flags</text>
+<rect x="470" y="288" width="699.8" height="60" rx="8" fill="#6a6a72"/>
+<text x="1432.0" y="332" font-size="32" fill="#eae7df">6.7 ms</text>
+<text x="440" y="450" text-anchor="end" font-size="30" fill="#9a9aa2">+ tau-sliced YIN</text>
+<rect x="470" y="406" width="104.4" height="60" rx="8" fill="#d4af37"/>
+<text x="1432.0" y="450" font-size="32" fill="#eae7df">1.0 ms</text>
+<line x1="609.3" y1="140" x2="609.3" y2="494" stroke="#d96a52" stroke-width="4" stroke-dasharray="12 9"/>
+<text x="609.3" y="532" text-anchor="middle" font-size="26" fill="#d96a52">budget</text>
+</svg>

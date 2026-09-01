@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 500" width="1600" height="500" font-family="ui-monospace, Menlo, Consolas, 'DejaVu Sans Mono', monospace" role="img" aria-label="Signal chain: the sax feeds the pitch tracker, which feeds the chord brain; the brain drives either the PSOLA voices or the phase vocoder voices, and PSOLA additionally reuses the pitch period the tracker already computed.">
+<rect width="1600" height="500" fill="#faf8f3"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#211f1a"/></marker><marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a6d1f"/></marker></defs>
+<rect x="60" y="230" width="170" height="96" rx="14" fill="none" stroke="#211f1a" stroke-width="3"/>
+<text x="145.0" y="278.0" text-anchor="middle" font-size="30" fill="#211f1a">sax in</text>
+<rect x="300" y="230" width="240" height="96" rx="14" fill="none" stroke="#211f1a" stroke-width="3"/>
+<text x="420.0" y="270.0" text-anchor="middle" font-size="30" fill="#211f1a">tracker</text>
+<text x="420.0" y="306.0" text-anchor="middle" font-size="24" fill="#211f1a" opacity="0.7">YIN</text>
+<rect x="610" y="230" width="240" height="96" rx="14" fill="none" stroke="#211f1a" stroke-width="3"/>
+<text x="730.0" y="270.0" text-anchor="middle" font-size="30" fill="#211f1a">THIRI</text>
+<text x="730.0" y="306.0" text-anchor="middle" font-size="24" fill="#211f1a" opacity="0.7">chord brain</text>
+<rect x="940" y="110" width="300" height="96" rx="14" fill="none" stroke="#8a6d1f" stroke-width="5"/>
+<text x="1090.0" y="150.0" text-anchor="middle" font-size="30" fill="#8a6d1f">PSOLA voices</text>
+<text x="1090.0" y="186.0" text-anchor="middle" font-size="24" fill="#8a6d1f" opacity="0.7">0.005x each</text>
+<rect x="940" y="350" width="300" height="96" rx="14" fill="none" stroke="#211f1a" stroke-width="3" stroke-dasharray="12 8" opacity="0.5"/>
+<text x="1090.0" y="390.0" text-anchor="middle" font-size="30" fill="#211f1a" opacity="0.5">vocoder voices</text>
+<text x="1090.0" y="426.0" text-anchor="middle" font-size="24" fill="#211f1a" opacity="0.4">0.25x each</text>
+<rect x="1330" y="230" width="210" height="96" rx="14" fill="none" stroke="#211f1a" stroke-width="3"/>
+<text x="1435.0" y="278.0" text-anchor="middle" font-size="30" fill="#211f1a">mix out</text>
+<line x1="230" y1="278" x2="288" y2="278" stroke="#211f1a" stroke-width="3" marker-end="url(#a)"/>
+<line x1="540" y1="278" x2="598" y2="278" stroke="#211f1a" stroke-width="3" marker-end="url(#a)"/>
+<text x="575" y="214" text-anchor="middle" font-size="24" fill="#6b6659">pitch</text>
+<path d="M850 258 L895 258 L895 158 L930 158" fill="none" stroke="#8a6d1f" stroke-width="4" marker-end="url(#ag)"/>
+<text x="868" y="284" font-size="22" fill="#8a6d1f">notes</text>
+<path d="M850 298 L895 298 L895 398 L930 398" fill="none" stroke="#8f8a7c" stroke-width="3" stroke-dasharray="12 8" opacity="0.55" marker-end="url(#a)"/>
+<path d="M420 230 L420 62 L1090 62 L1090 100" fill="none" stroke="#8a6d1f" stroke-width="4" marker-end="url(#ag)"/>
+<text x="755" y="46" text-anchor="middle" font-size="26" fill="#8a6d1f">period &#8212; already computed, reused free</text>
+<path d="M1240 158 L1285 158 L1285 258 L1320 258" fill="none" stroke="#8a6d1f" stroke-width="4" marker-end="url(#ag)"/>
+<path d="M1240 398 L1285 398 L1285 298 L1320 298" fill="none" stroke="#8f8a7c" stroke-width="3" stroke-dasharray="12 8" opacity="0.55" marker-end="url(#a)"/>
+</svg>

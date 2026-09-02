@@ -130,6 +130,7 @@
       "evidence": "Read from Sushi's own gRPC SystemController.GetBuildInfo (info.version) by the profiling harness on the board - recorded per row in data/profiling-results.csv, 45 board rows, all 1.3.0. Do NOT try to read it from /usr/bin/sushi, which is a wrapper shell script.",
       "gotchas": [
         "Sushi has NO xrun counter. `max >= 1.0` in its timing statistics is the only dropout signal, and nothing will tell you to look.",
+        "Sushi launched as a systemd USER unit gets ZERO audio callbacks on this image, and nothing says so. The user manager (started by logind) runs at rtprio 0 / memlock 8 MB and a unit cannot exceed its manager, so LimitRTPRIO=99 on the unit is silently capped to 0. RASPA then opens audio_evl, exchanges nothing (dmesg: `ping=0 pong=0`, `dev closed`) and the engine reports avg=max=0.000 while every gRPC write returns SUCCESS and never applies. An ssh login shell has rtprio 99 / memlock unlimited from pam; launch Sushi from one (setsid nohup, as tools/sushi_board.sh does). Verified 2026-09-02: /proc/<pid>/limits under the unit = 0/8 MB, from the shell = 99/unlimited, and only the latter logs `AUDIO_PROC_START cpu_num: 1`. `loginctl enable-linger mind` (root) is now set so shell-launched daemons survive logout; it does not fix the unit cap.",
         "/usr/bin/sushi is a wrapper shell script that selects sushi_b32/b64/b128. `ldd` and `strings` on it tell you nothing - inspect sushi_b<size> instead."
       ]
     }

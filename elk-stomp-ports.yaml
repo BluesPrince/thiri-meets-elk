@@ -384,31 +384,36 @@ ports:
     label: "LINE OUT"
     group: audio_out
     connector: 3.5 mm
-    engine_channel: null
+    engine_channel: [2, 3]
     routing_jumpers: null
-    verification: silkscreen
-    evidence: "Connector fitted and labelled, distinct from GUITAR OUT. Never used."
+    verification: verified
+    evidence: >-
+      2026-09-02, tools/iotest.py on the board: with ONLY engine channel 2 driven
+      (chura123 loop, unity) audio was heard at LINE OUT and at HEADPHONE OUT and
+      nowhere else patched; then with ONLY channel 3 driven (880 Hz sine) the same
+      two jacks. LINE OUT therefore carries the same 2/3 pair as the headphone
+      jack in this unit's jumper state -- it is NOT a fifth channel and NOT
+      exclusive with the headphones.
     note: >-
-      The devkit README's four engine OUTPUTS are guitar out L/R plus headphones,
-      so LINE OUT is not one of the four by default. It is presumably an alternate
-      jumper destination. Jumper block not identified; see open_questions.jumper_matrix.
+      Which jumper puts it there was still not determined (both jacks were live
+      at once, so the shunts were not moved). Left/right within the pair was not
+      attributed either: the listener reported "both jacks" for each channel, not
+      which side.
 
   - id: headphone_out
     label: "HEADPHONE OUT"
     group: audio_out
     connector: 3.5 mm
     engine_channel: [2, 3]
-    engine_channel_verification: inferred
+    engine_channel_verification: verified
     routing_jumpers: ["HPL", "HPR"]
     verification: verified
     evidence: >-
-      Audio was heard here. But the config drove engine channels 0,1,2,3
-      simultaneously with the same signal, so we cannot attribute the headphone
-      output to 2/3 specifically - only that it produced sound while all four
-      were driven. Elk's devkit README:199 does list the engine outputs as guitar
-      out L&R plus stereo headphones, which agrees with 2/3 - but the jack was
-      never isolated and jumper positions are per-unit, so the binding stays
-      inferred rather than being raised on the vendor doc alone.
+      2026-09-02, tools/iotest.py: engine channel 2 driven ALONE (chura123 loop)
+      was heard here; then channel 3 driven ALONE (880 Hz) was heard here. Each
+      channel isolated in turn, so the 2/3 binding is measured, not taken from
+      the devkit README. (Earlier evidence had driven 0,1,2,3 together and could
+      not attribute anything.) Left/right within the pair not attributed.
 
   # --- MIDI ----------------------------------------------------------------
   # THE CORRECTION. We asserted for a week that this board has no MIDI jacks,
@@ -703,7 +708,7 @@ open_questions:
     question: "What jumper positions was this unit shipped with?"
   - id: line_jacks
     priority: medium
-    question: "Are LINE IN and LINE OUT exclusive with the guitar jacks, and which jumper exposes LINE OUT?"
+    question: "What channel does LINE IN map to? (LINE OUT is settled 2026-09-02: it carries the 2/3 pair together with HEADPHONE OUT -- not exclusive with it. Which jumper selects that, and left/right within the pair, remain open.)"
   - id: input_channels_2_3
     priority: medium
     question: "The devkit README says line in is engine channels 2 and 3. Confirm on this board by passing signal into LINE IN alone."

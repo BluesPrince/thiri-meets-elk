@@ -305,7 +305,7 @@ ports:
     connector: '1/4 inch'
     level: instrument
     engine_channel: [0]
-    engine_channel_verification: documented
+    engine_channel_verification: verified
     routing_jumpers: ["G-I-L"]
     verification: documented
     evidence: >-
@@ -316,7 +316,7 @@ ports:
       {engine_channel: 0, track_channel: 0}; the rest declare "inputs": [] and
       generate audio internally, including the configs behind every board row in
       data/profiling-results.csv. We never passed signal into this jack with the
-      other inputs silent, so the jack-to-channel binding is documented, not proven.
+      other inputs silent, so the jack-to-channel binding WAS documented. VERIFIED 2026-09-02 (tools/iotest.py in): a Roland Aerophone AE-10's 1/4" output played into GUITAR IN L appeared on engine channel 0 at peak -6.5 dBFS (rms -22.3, crest 15.8 dB) while channels 1/2/3 stayed at the noise floor -- so the binding is isolated and measured. The level is healthy, NOT the ~15x-hot figure from the internal-bus gain-staging note; that was a different point in the chain, not this jack.
 
   - id: guitar_in_r
     label: "GUITAR IN R"

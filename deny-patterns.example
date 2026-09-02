@@ -1,0 +1,22 @@
+# Example deny list for tools/sync-skills.sh
+#
+# Copy to ~/.thiri/skills-deny.txt (or set DENY_FILE=/path/to/list) and replace these
+# with your own. The real list is deliberately not in this repo: the patterns name the
+# exact symbols and phrases worth protecting, so a public copy of the list would leak
+# the thing the gate exists to keep back.
+#
+# Format: <regex>@@<why>
+#   - one rule per line; '#' comments and blank lines are ignored
+#   - the regex is passed to `grep -rIinE`, so it may contain alternations
+#   - the '@@' delimiter exists because '|' cannot: the patterns contain '|' themselves,
+#     and splitting on it silently truncated them into invalid regex
+#   - <why> is printed when a rule fires, so write it for the person who has to act
+#
+# Good rules name a thing that is checkable, not a vibe. "Do not leak the algorithm" is
+# not a rule; the header name the algorithm lives in is.
+
+MySecretClass@@internal class name
+my_internal_flag@@internal mode name
+the special sauce@@internal doctrine
+private-repo-name@@private repository name
+[Pp]assword[[:space:]]*[:=][[:space:]]*[^ <$]@@a literal credential

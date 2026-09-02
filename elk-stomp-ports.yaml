@@ -210,7 +210,7 @@ audio_engine:
   critical_note_verification: verified
   critical_note_evidence: >-
     Measured on this board in this project; conditions and results recorded at
-    horn-sxtn/stomp/run_rig.sh. NOT in data/profiling-results.csv - no row in
+    the rig runner in this project's private plugin repo. NOT in data/profiling-results.csv - no row in
     that dataset varies thread affinity (affinity_psr is "na" in all 51 rows)
     and tools/ has no harness that pins or unpins a companion process.
 
@@ -244,7 +244,7 @@ lifecycle:
     verification: verified
     evidence: >-
       Every stop path in this project sends SIGINT and only SIGINT
-      (tools/sushi_board.sh stop -> `kill -INT`; horn-sxtn/stomp/run_rig.sh).
+      (tools/sushi_board.sh stop -> `kill -INT`; the rig runner in this project's private plugin repo).
       This proves the procedure works, not what the other signals do.
   failure_mode:
     effect: >-

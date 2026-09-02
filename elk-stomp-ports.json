@@ -148,7 +148,7 @@
     "timing_unit_evidence": "RUNBOOK.md section 0; tools/profile_sweep.py header. The CSV's thiri_max_ms column is DERIVED from thiri_max by the harness, so it corroborates nothing on its own.",
     "critical_note": "CPU 0 is idle. Any companion process (hardware daemon, control app) left unpinned lands on CPU 1 and fights the audio callback. Pinning A/B, one paired session on the live rig config (60 s steady playback per arm), as a fraction of the block period: worst block 0.770 alone, 2.273 with an unpinned control surface, 0.760 with `taskset -c 0`. The AVERAGE never moved (~0.60) in any of the three. 0.770 is that session's control arm, NOT the board's general clean baseline: across the unloaded board rows in data/profiling-results.csv the worst block ranges roughly 0.74-0.83 at the same ~0.60 average. Budget headroom against 0.83; read a pinning regression only from a multiple-of-baseline jump like 2.273, not from 0.83 variance.",
     "critical_note_verification": "verified",
-    "critical_note_evidence": "Measured on this board in this project; conditions and results recorded at horn-sxtn/stomp/run_rig.sh. NOT in data/profiling-results.csv - no row in that dataset varies thread affinity (affinity_psr is \"na\" in all 51 rows) and tools/ has no harness that pins or unpins a companion process.",
+    "critical_note_evidence": "Measured on this board in this project; conditions and results recorded at the rig runner in this project's private plugin repo. NOT in data/profiling-results.csv - no row in that dataset varies thread affinity (affinity_psr is \"na\" in all 51 rows) and tools/ has no harness that pins or unpins a companion process.",
     "buffer_size_selection": {
       "binaries": [
         "sushi_b32",
@@ -188,7 +188,7 @@
     ],
     "practice": {
       "verification": "verified",
-      "evidence": "Every stop path in this project sends SIGINT and only SIGINT (tools/sushi_board.sh stop -> `kill -INT`; horn-sxtn/stomp/run_rig.sh). This proves the procedure works, not what the other signals do."
+      "evidence": "Every stop path in this project sends SIGINT and only SIGINT (tools/sushi_board.sh stop -> `kill -INT`; the rig runner in this project's private plugin repo). This proves the procedure works, not what the other signals do."
     },
     "failure_mode": {
       "effect": "SIGTERM or SIGKILL wedges the audio_evl driver. The next Sushi launch hangs and the board must be power-cycled.",

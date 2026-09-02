@@ -33,19 +33,33 @@ SKILLS=(
 # NOTE the '@@' delimiter -- '|' cannot be used here because the patterns themselves
 # contain alternations, and splitting on '|' silently truncated them to invalid regex.
 # Engine internals are the differentiator; the voicing doctrine IS the product.
-DENY=(
-'thiri_voicing@@engine header name'
-'fifthVoiceMode@@internal voicing mode'
-'fifth_voice_mode@@internal voicing mode'
-'PsolaVoice@@engine class name'
-'VoiceMidiOut@@engine class name'
-'class ChordId@@engine class name'
-'seat model@@voicing doctrine'
-'guide tones? (are )?inviolable@@voicing doctrine'
-'replaces the (1|5|fifth|root)@@voicing doctrine'
-'horn-sxtn@@private repository name'
-'[Pp]assword[[:space:]]*[:=][[:space:]]*[^ <$]@@a literal credential'
-)
+#
+# WHY THE LIST IS NOT IN THIS FILE
+#   The patterns name the exact symbols and phrases worth protecting. A list like that,
+#   sitting in a public repo next to the gate, is a map to everything the gate exists to
+#   keep back -- it leaks by being read, without a single skill ever being wrong. So the
+#   list lives outside the repo and the mechanism stays in it. See deny-patterns.example.
+DENY_FILE="${DENY_FILE:-$HOME/.thiri/skills-deny.txt}"
+
+# Fail CLOSED. A gate whose rules are missing must refuse, not wave everything through --
+# the same reason an unrunnable pattern below is an error rather than a skipped line.
+if [ ! -r "$DENY_FILE" ]; then
+  echo "!! no deny list at $DENY_FILE (set DENY_FILE=... to point elsewhere)"
+  echo "   REFUSING TO SYNC -- a gate with no rules is not a gate."
+  echo "   See deny-patterns.example for the format."
+  exit 1
+fi
+
+DENY=()
+while IFS= read -r line; do
+  case "$line" in ''|'#'*) continue ;; esac   # skip blanks and comments
+  DENY+=("$line")
+done < "$DENY_FILE"
+
+if [ "${#DENY[@]}" -eq 0 ]; then
+  echo "!! deny list $DENY_FILE has no patterns -- REFUSING TO SYNC."
+  exit 1
+fi
 
 fail=0
 scan() {                                  # scan <dir-or-file>
@@ -66,6 +80,7 @@ scan() {                                  # scan <dir-or-file>
 }
 
 echo "== checking shareable skills in $SRC"
+echo "== ${#DENY[@]} deny patterns loaded from $DENY_FILE"
 for s in "${SKILLS[@]}"; do
   if [ ! -d "$SRC/$s" ]; then echo "!! missing skill: $s"; fail=$((fail+1)); continue; fi
   before=$fail

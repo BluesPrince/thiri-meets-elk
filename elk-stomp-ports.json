@@ -287,7 +287,7 @@
         "G-O-L"
       ],
       "verification": "silkscreen",
-      "evidence": "Connector fitted and labelled. Every board config routes track outputs to engine channels 0, 1, 2 and 3 together and no config names a jack, so the configs do not bind this jack to a channel. The binding comes from Elk's devkit README:199, which lists the four engine outputs as guitar out L&R plus stereo headphones. Never monitored from this jack."
+      "evidence": "Connector fitted and labelled. Never monitored from this jack, so the positive binding still rests on Elk's devkit README:199 (four engine outputs = guitar out L&R plus stereo headphones). What IS measured (2026-09-02, tools/iotest.py out 0): engine channel 0 driven alone is SILENT at HEADPHONE OUT and LINE OUT, which both carry 2/3 -- so 0/1 is a distinct pair from 2/3, and this jack is the only remaining place for it. Patch it and run `out 0` / `out 1` to raise this to verified."
     },
     {
       "id": "guitar_out_r",
@@ -302,7 +302,7 @@
         "G-O-R"
       ],
       "verification": "silkscreen",
-      "evidence": "As GUITAR OUT L - devkit README:199 for the binding, connector read from photographs, never monitored."
+      "evidence": "As GUITAR OUT L: binding from devkit README:199, connector read from photographs, never monitored. The 0/1-vs-2/3 pair distinction is measured (channel 0 alone is silent at the 2/3 jacks); channel 1 alone not yet run."
     },
     {
       "id": "line_out",
@@ -747,7 +747,7 @@
     {
       "id": "jumper_matrix",
       "priority": "high",
-      "question": "Which jumper position routes which jack to which codec channel?",
+      "question": "Which jumper position routes which jack to which codec channel? OUTPUT side partly settled 2026-09-02 in this unit's jumper state: engine 2/3 reaches HEADPHONE OUT and LINE OUT (both, each channel isolated), and engine 0 reaches neither -- so the outputs are two distinct pairs. Still open: which shunt does that, the L/R side within each pair, and the whole INPUT side.",
       "why": "Seven jacks, four channels. Without this, jack selection is guesswork."
     },
     {

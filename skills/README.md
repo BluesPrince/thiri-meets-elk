@@ -1,6 +1,6 @@
 # Skills
 
-Six agent skills for building audio software on Elk Audio OS. They encode what this
+Ten agent skills for building audio software on Elk Audio OS. They encode what this
 project cost us to learn, in the form a coding agent can act on.
 
 A skill is a folder with a `SKILL.md` — instructions an AI coding assistant loads when the
@@ -17,8 +17,17 @@ do not use an agent. Nothing here needs THIRI, our plugin, or our hardware beyon
 | **elk-stomp-io** | Which jack is engine channel 0, and what else is on this board? |
 | **elk-serial-console** | The network is down and I need to work on the board anyway. |
 | **midi-controller-profile** | What is this instrument *actually* transmitting? |
+| **golden-vector-port-verify** | I ported an engine to C++ — how do I *prove* it is the same engine, bit for bit? |
+| **audio-signal-proof** | Did the plugin really play those notes? Measure the audio; don't listen. |
+| **sushi-plugin-host-config** | Sushi's config, gRPC control, what a plugin can see of the transport, and the initial-state traps. |
+| **rt-prerender-playback** | A sequencer/arpeggiator in a real-time plugin without the solver on the audio thread. |
 
-Three of them exist because of a failure mode that produces **no log line at all**: a MIDI
+The four added 2026-09-03 came out of putting an arpeggiator on the pedal: an engine
+ported and pinned to its TypeScript original at 18,080/18,080 vectors, played off a render
+thread, and proved through a synth with per-note pitch probes — plus the day's host facts
+(Sushi tells a plugin it stopped, never what tempo it is at).
+
+Three of the original six exist because of a failure mode that produces **no log line at all**: a MIDI
 mapping that is deaf because nothing linked the ALSA sequencer, a control surface eating the
 audio deadline while the CPU meter reads a healthy 60%, and a saturator being overdriven by
 a bus that was 15× hotter than anyone believed. Those are the expensive kind, and they are

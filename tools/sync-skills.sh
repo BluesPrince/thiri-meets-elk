@@ -27,6 +27,11 @@ SKILLS=(
   elk-stomp-io
   elk-serial-console
   midi-controller-profile
+  # added 2026-09-03 (arp-mode build): method + host facts, none of it the engine
+  golden-vector-port-verify
+  audio-signal-proof
+  sushi-plugin-host-config
+  rt-prerender-playback
 )
 
 # Things that must never appear in a public copy. Each line: <regex>@@<why>

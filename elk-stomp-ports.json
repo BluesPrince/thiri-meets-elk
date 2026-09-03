@@ -687,9 +687,10 @@
       ],
       "sensei_name": "PRESET_SW",
       "silkscreen": "4-POSITION ROTARY SWITCH",
-      "reads_as": "analog_input on an 8-bit ADC. It arrives as a LEVEL, not a toggle - threshold the analog value into positions.",
-      "verification": "documented",
-      "evidence": "sensei_config.json id 37, name PRESET_SW, sensor_type analog_input. Silkscreen label read from board photographs. NEVER EXERCISED - the number of distinct levels and where they sit in 0-255 are unconfirmed.",
+      "reads_as": "discrete_input on ADC pin 1 (8-bit) with four voltage windows in the stock sensei_config.json: [0.15-0.25], [0.47-0.57], [0.63-0.73], [0.30-0.40] -> range indices 0..3 (note: not monotonic in voltage). Would arrive as a range_ev.",
+      "verification": "verified",
+      "fitted_on_this_unit": false,
+      "evidence": "2026-09-02, on the rig: NO event from id 37 in any Sensei mode - stock discrete_input, a probe config with the pin as continuous analog_input in on_value_changed mode, and the same in continuous mode (POT2's ADC jitter proved each stream alive). Owner confirmed the rotary position has no knob fitted on this unit. Config facts read from /home/mind/sensei_config.json (id 37, hardware analog_input_pin pin 1). Glue consequence: layer selection moved to ENC4S click (horn-sxtn glue_thiri.py); PRESET_SW handling kept for a unit that has the knob.",
       "identification": "inferred",
       "identification_note": "That PRESET_SW is the 4-position rotary is an inference: it is the only one of the 41 entries not otherwise accounted for (1-12 RGB, 13-16 LED, 17-20 SW, 21-28 POT, 29-32 ENC*S, 33-36 ENC, 38-41 DET), and an 8-bit ADC on one pin is the standard way to read a multi-position rotary."
     },
@@ -774,7 +775,7 @@
     {
       "id": "preset_sw_levels",
       "priority": "medium",
-      "question": "How many distinct levels does PRESET_SW produce, and where do they sit in 0-255?"
+      "question": "How many distinct levels does PRESET_SW produce, and where do they sit in 0-255? (Settled for THIS unit 2026-09-02: none - no knob is fitted and the pin never emits. The stock config expects four windows, 0.15-0.25 / 0.47-0.57 / 0.63-0.73 / 0.30-0.40; whether real detents land in them is untested on any unit.)"
     },
     {
       "id": "ip_binary_present",

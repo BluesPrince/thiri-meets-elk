@@ -105,6 +105,9 @@ calibration: **10.7 cycles per vector operation** in accumulation chains — abo
 scalar VFP does. GCC also will not auto-vectorise float loops without
 `-funsafe-math-optimizations`. Budget from measurement, not from the ISA datasheet.
 
+The longer write-up for Elk, with platform notes and the open questions, is
+**[docs/NOTES-FOR-ELK.md](docs/NOTES-FOR-ELK.md)**.
+
 ---
 
 ## The method — the actual contribution
